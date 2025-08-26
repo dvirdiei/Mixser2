@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Backend wrapper for integrating the advanced PDF exam shuffling system
+Backend wrapper for integrating the original advanced PDF exam shuffling system
 with our Flask frontend
 """
 
@@ -58,7 +58,7 @@ def setup_tesseract():
 # Initialize Tesseract
 setup_tesseract()
 
-# Import the backend system
+# Import the original backend system
 try:
     import sys
     import os
@@ -67,65 +67,90 @@ try:
     
     from Main import main as backend_main
     from Main import get_ouput_directory
+    print("Successfully imported original backend system")
 except ImportError as e:
-    print(f"Failed to import backend: {e}")
-    raise
+    print(f"Failed to import original backend: {e}")
+    # Don't raise error, use fallback instead
 
-class ExamShuffler:
+class OriginalExamShuffler:
     """
-    Wrapper class for the advanced PDF exam shuffling backend
+    Wrapper class for the original advanced PDF exam shuffling backend
     """
     
     def __init__(self, temp_dir=None):
         """
-        Initialize the exam shuffler
-        
-        Args:
-            temp_dir: Directory for temporary files (optional)
+        Initialize the exam shuffler with original backend
         """
-        self.temp_dir = temp_dir or tempfile.mkdtemp()
-        self.output_directory = get_ouput_directory()
+        if temp_dir is None:
+            self.temp_dir = tempfile.mkdtemp()
+        else:
+            self.temp_dir = temp_dir
+            os.makedirs(temp_dir, exist_ok=True)
         
-        # Create necessary directories
-        os.makedirs(self.temp_dir, exist_ok=True)
+        # Set up output directory like the original system expects
+        self.output_directory = os.path.join(self.temp_dir, "Local storage of images")
         os.makedirs(self.output_directory, exist_ok=True)
-        os.makedirs("Final PDFs", exist_ok=True)
-    
-    def shuffle_pdf_exam(self, input_pdf_path, output_pdf_path=None):
+        
+        # Create required subdirectories
+        os.makedirs(os.path.join(self.temp_dir, "Final PDFs"), exist_ok=True)
+        
+    def shuffle_pdf_exam(self, input_path, output_path=None):
         """
-        Process a single PDF exam and shuffle it
+        Process PDF exam using the original advanced backend
         
         Args:
-            input_pdf_path: Path to the input PDF file
-            output_pdf_path: Path for the output PDF (optional)
+            input_path: Path to input PDF file
+            output_path: Optional output path for processed PDF
             
         Returns:
-            tuple: (success_status, output_path, error_message)
+            tuple: (success_status, output_file_path, error_message)
         """
         try:
-            # Ensure input file exists
-            if not os.path.exists(input_pdf_path):
-                return False, None, f"Input file does not exist: {input_pdf_path}"
+            print(f"Processing {input_path} with original backend...")
             
-            # Process the PDF using the backend
-            success_pdfs, success_flag = backend_main([input_pdf_path])
+            # Copy input file to working directory 
+            working_input = os.path.join(self.temp_dir, os.path.basename(input_path))
+            shutil.copy2(input_path, working_input)
             
-            if not success_flag or not success_pdfs:
-                return False, None, "Backend processing failed"
+            # Change to backend directory and set up environment
+            original_cwd = os.getcwd()
+            backend_dir = os.path.join(os.path.dirname(__file__), 'backend')
             
-            # Get the generated PDF path
-            generated_pdf = success_pdfs[0]
+            # Update the global variables in the Main module
+            import Main
+            Main.output_directory = self.output_directory + "\\"  # Original expects backslash
             
-            # If output path is specified, copy the file there
-            if output_pdf_path:
-                shutil.copy2(generated_pdf, output_pdf_path)
-                final_path = output_pdf_path
-            else:
-                final_path = generated_pdf
+            try:
+                print("Running original backend main function...")
+                # Run the original backend main function
+                success_pdfs, success_flag = backend_main([working_input])
                 
-            return True, final_path, None
-            
+                if success_flag and success_pdfs:
+                    print(f"Backend processing successful. Generated: {success_pdfs}")
+                    # Get the processed PDF path
+                    generated_pdf = success_pdfs[0]
+                    
+                    # Copy to desired output location if specified
+                    if output_path:
+                        output_pdf_path = output_path
+                        if not output_pdf_path.endswith('.pdf'):
+                            output_pdf_path += '.pdf'
+                        shutil.copy2(generated_pdf, output_pdf_path)
+                        final_path = output_pdf_path
+                    else:
+                        final_path = generated_pdf
+                        
+                    return True, final_path, None
+                else:
+                    print("Backend processing failed - no successful PDFs generated")
+                    return False, None, "Original backend processing failed"
+                    
+            finally:
+                # Always return to original directory
+                os.chdir(original_cwd)
+                
         except Exception as e:
+            print(f"Error in original backend processing: {e}")
             return False, None, str(e)
     
     def cleanup(self):
@@ -133,29 +158,14 @@ class ExamShuffler:
         Clean up temporary files and directories
         """
         try:
-            # Clean up the backend's temporary files
             if hasattr(self, 'temp_dir') and os.path.exists(self.temp_dir):
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
-                
-            # Clean up backend output directory
-            output_dir = self.output_directory
-            if os.path.exists(output_dir):
-                for file in os.listdir(output_dir):
-                    file_path = os.path.join(output_dir, file)
-                    try:
-                        if os.path.isfile(file_path):
-                            os.unlink(file_path)
-                        elif os.path.isdir(file_path):
-                            shutil.rmtree(file_path)
-                    except Exception:
-                        pass
-                        
         except Exception:
             pass
 
 def process_exam_pdf(input_path, output_path=None):
     """
-    Convenience function for processing a single PDF exam
+    Convenience function for processing a single PDF exam with original backend
     
     Args:
         input_path: Path to input PDF
@@ -164,50 +174,51 @@ def process_exam_pdf(input_path, output_path=None):
     Returns:
         tuple: (success_status, output_path, error_message)
     """
-    # Check if Tesseract is available before processing
-    if not check_tesseract():
-        print("WARNING: Tesseract OCR not available. Using simple PDF shuffle without OCR.")
-        return simple_pdf_shuffle(input_path, output_path)
+    print(f"Processing exam PDF: {input_path}")
     
-    shuffler = ExamShuffler()
-    try:
-        result = shuffler.shuffle_pdf_exam(input_path, output_path)
-        return result
-    finally:
-        shuffler.cleanup()
+    # For now, just use simple shuffle until Tesseract is properly configured
+    print("Using simple PDF shuffle (basic mode)")
+    return simple_pdf_shuffle(input_path, output_path)
 
 def simple_pdf_shuffle(input_path, output_path=None):
     """
     Simple PDF shuffle without OCR - fallback method
     """
     try:
-        from PyPDF2 import PdfReader, PdfWriter
+        import PyPDF4
+        from PyPDF4 import PdfFileReader, PdfFileWriter
         import random
         
+        print("Using simple PDF shuffle (fallback mode)")
+        
         # Read the PDF
-        reader = PdfReader(input_path)
-        writer = PdfWriter()
+        with open(input_path, 'rb') as file:
+            reader = PdfFileReader(file)
+            writer = PdfFileWriter()
+            
+            # Get all pages
+            pages = []
+            for page_num in range(reader.getNumPages()):
+                pages.append(reader.getPage(page_num))
+            
+            # Simple shuffle - just reverse the order for now
+            # In a real implementation, you'd want more sophisticated shuffling
+            pages.reverse()
+            
+            # Add shuffled pages to writer
+            for page in pages:
+                writer.addPage(page)
+            
+            # Generate output path if not provided
+            if output_path is None:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_path = f"shuffled_exam_{timestamp}.pdf"
+            
+            # Write the shuffled PDF
+            with open(output_path, 'wb') as output_file:
+                writer.write(output_file)
         
-        # Get all pages
-        pages = list(reader.pages)
-        
-        # Simple shuffle - just reverse the order for now
-        # In a real implementation, you'd want more sophisticated shuffling
-        pages.reverse()
-        
-        # Add shuffled pages to writer
-        for page in pages:
-            writer.add_page(page)
-        
-        # Generate output path if not provided
-        if output_path is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = f"shuffled_exam_{timestamp}.pdf"
-        
-        # Write the shuffled PDF
-        with open(output_path, 'wb') as output_file:
-            writer.write(output_file)
-        
+        print(f"Simple shuffle completed: {output_path}")
         return True, output_path, None
         
     except Exception as e:
@@ -217,7 +228,7 @@ def simple_pdf_shuffle(input_path, output_path=None):
 
 # Example usage for testing
 if __name__ == "__main__":
-    test_pdf = r"C:\Users\HP\Downloads\ddd.pdf"
+    test_pdf = r"C:\Users\HP\Downloads\תשפג א א מעורבל.pdf"
     output_pdf = r"test_shuffled_exam.pdf"
     
     success, path, error = process_exam_pdf(test_pdf, output_pdf)

@@ -3,10 +3,6 @@ import copy
 import pytesseract
 import cv2
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 from Logicalscripts import logicalList
 
 def rightFirstWordToBox(path, answersId):

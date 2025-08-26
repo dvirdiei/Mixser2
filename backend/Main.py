@@ -1,11 +1,4 @@
 
-import sys
-import os
-
-# Add current directory to path
-current_dir = os.path.dirname(__file__)
-sys.path.insert(0, current_dir)
-
 from Logicalscripts import *
 from FunctionalScripts import *
 

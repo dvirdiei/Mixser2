@@ -2,10 +2,6 @@ import os
 
 from PIL import Image, ImageFont, ImageDraw
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 from FunctionalScripts import functionalFiles
 from FunctionalScripts import editPng
 def createAnswersPage(path_answers):
