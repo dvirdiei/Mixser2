@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>שגיאת שרת - מערכת ערבוב מבחנים</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="content-wrapper">
+            <div class="error-page">
+                <h1>500</h1>
+                <h2>שגיאת שרת</h2>
+                <p>מצטערים, אירעה שגיאה בשרת. אנא נסה שוב מאוחר יותר.</p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">חזרה לעמוד הבית</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
