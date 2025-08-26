@@ -3,7 +3,7 @@ services:
     name: pdf-shuffler
     env: python
     plan: free
-    buildCommand: "chmod +x build.sh && ./build.sh"
+    buildCommand: "apt-get update && apt-get install -y tesseract-ocr tesseract-ocr-heb tesseract-ocr-eng tesseract-ocr-ara poppler-utils libgl1-mesa-glx libglib2.0-0 && pip install -r requirements.txt"
     startCommand: "gunicorn app:app --config gunicorn.conf.py"
     envVars:
       - key: PYTHONPATH

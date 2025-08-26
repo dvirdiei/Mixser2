@@ -100,6 +100,13 @@ def help_page():
     """
     return render_template('help.html')
 
+@app.route('/favicon.ico')
+def favicon():
+    """
+    Favicon route
+    """
+    return send_file('static/favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 @app.errorhandler(413)
 def too_large(e):
     flash('הקובץ גדול מדי. גודל מקסימלי: 50MB')
