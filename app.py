@@ -7,16 +7,12 @@ import tempfile
 import shutil
 from datetime import datetime
 from exam_processor import process_exam_pdf
-import signal
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max-limit
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching
 app.secret_key = 'mixwer-advanced-exam-shuffler-2025'
-
-# Set timeout for long operations
-signal.alarm(300)  # 5 minute timeout
 
 # יצירת תיקיות נדרשות
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

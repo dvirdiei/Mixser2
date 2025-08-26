@@ -9,7 +9,53 @@ with our Flask frontend
 import os
 import tempfile
 import shutil
+import subprocess
 from pathlib import Path
+
+# Check if Tesseract is available
+def check_tesseract():
+    """Check if Tesseract OCR is available"""
+    try:
+        result = subprocess.run(['tesseract', '--version'], 
+                              capture_output=True, text=True, timeout=10)
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return False
+
+# Set Tesseract path for different environments
+def setup_tesseract():
+    """Setup Tesseract path for different environments"""
+    if not check_tesseract():
+        # Try common paths
+        possible_paths = [
+            '/usr/bin/tesseract',
+            '/usr/local/bin/tesseract',
+            '/opt/homebrew/bin/tesseract',
+            'C:\\Program Files\\Tesseract-OCR\\tesseract.exe',
+            'C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe'
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                os.environ['PATH'] = os.path.dirname(path) + os.pathsep + os.environ.get('PATH', '')
+                break
+    
+    # Set TESSDATA_PREFIX if not set
+    if 'TESSDATA_PREFIX' not in os.environ:
+        tessdata_paths = [
+            '/usr/share/tesseract-ocr/4.00/tessdata/',
+            '/usr/share/tesseract-ocr/tessdata/',
+            '/usr/local/share/tessdata/',
+            'C:\\Program Files\\Tesseract-OCR\\tessdata\\'
+        ]
+        
+        for path in tessdata_paths:
+            if os.path.exists(path):
+                os.environ['TESSDATA_PREFIX'] = path
+                break
+
+# Initialize Tesseract
+setup_tesseract()
 
 # Import the backend system
 try:
@@ -117,6 +163,12 @@ def process_exam_pdf(input_path, output_path=None):
     Returns:
         tuple: (success_status, output_path, error_message)
     """
+    # Check if Tesseract is available before processing
+    if not check_tesseract():
+        error_msg = "Tesseract OCR is not installed or not accessible. Please install tesseract-ocr package."
+        print(f"ERROR: {error_msg}")
+        return False, None, error_msg
+    
     shuffler = ExamShuffler()
     try:
         result = shuffler.shuffle_pdf_exam(input_path, output_path)

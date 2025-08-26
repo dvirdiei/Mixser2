@@ -3,6 +3,11 @@ services:
     name: pdf-shuffler
     env: python
     plan: free
-    buildCommand: ""
-    startCommand: gunicorn app:app
+    buildCommand: "chmod +x build.sh && ./build.sh"
+    startCommand: "gunicorn app:app --config gunicorn.conf.py"
+    envVars:
+      - key: PYTHONPATH
+        value: "/opt/render/project/src"
+      - key: TESSDATA_PREFIX
+        value: "/usr/share/tesseract-ocr/4.00/tessdata/"
 
